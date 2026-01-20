@@ -2,27 +2,27 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { GoogleGenAI } from "@google/genai";
 
-// Images are served from the /public folder in Vite/Vercel
+// Standard Vite behavior: files in /public are served at the root path.
 const IMAGES = {
-  LOGO: "imagenes/Logo-definitivo.png",
-  HERO: "imagenes/Tournedo-de-rabo-de-toro.jpg",
-  PHILOSOPHY: "imagenes/Foto-de-perfil.jpg",
-  LOGISTICS: "imagenes/Canelon-con-salsa-ligera.jpg",
-  FORM_BG: "imagenes/Aperitivos-glaseados.jpg",
-  MENU_1: "imagenes/Gambones-con-mango-y-aguacate.jpg",
-  MENU_2: "imagenes/Carrillera-glaseada.jpg",
-  MENU_3: "imagenes/Pastel-de-chocolate.jpg",
-  SECONDARY: "imagenes/Bacalao-con-ratatouille.jpg"
+  LOGO: "/imagenes/Logo-definitivo.png",
+  HERO: "/imagenes/Tournedo-de-rabo-de-toro.jpg",
+  PHILOSOPHY: "/imagenes/Foto-de-perfil.jpg",
+  LOGISTICS: "/imagenes/Canelon-con-salsa-ligera.jpg",
+  FORM_BG: "/imagenes/Aperitivos-glaseados.jpg",
+  MENU_1: "/imagenes/Gambones-con-mango-y-aguacate.jpg",
+  MENU_2: "/imagenes/Carrillera-glaseada.jpg",
+  MENU_3: "/imagenes/Pastel-de-chocolate.jpg",
+  SECONDARY: "/imagenes/Bacalao-con-ratatouille.jpg"
 };
 
 const SYSTEM_INSTRUCTION = `
 Act as the Concierge for Artesano, a luxury bespoke Private Chef service specializing in Spanish and Mediterranean haute cuisine.
-Personality: Polite, passionate, calm, and highly professional. Convey a sense of "everything is under control."
+Personality: Polite, passionate, calm, and highly professional.
 STRICT RULES:
-- Pricing: Menus range from £50 to £100 per person. This covers ingredients and the chef's time. Travel/accommodation extra based on distance.
-- Allergies: Respond with: "That is no problem at all; we adapt swiftly to adjust the menu without sacrificing excellence."
-- Logistics: Chef can use client's tableware or bring professional gear. Chef leaves the kitchen impeccable (cleaning included).
-- Cancellations: 20% deposit. Full refund (14+ days), 50% deposit (7 days), non-refundable (<48h).
+- Pricing: £50 to £100 per person. Travel extra based on distance.
+- Allergies: "No problem at all; we adapt swiftly to adjust the menu without sacrificing excellence."
+- Logistics: Chef leaves the kitchen impeccable (cleaning included).
+- Cancellations: 20% deposit. Full refund (14+ days), 50% (7 days), non-refundable (<48h).
 - Language: British English.
 `;
 
@@ -33,7 +33,9 @@ const Chatbot = () => {
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages]);
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages]);
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
@@ -44,10 +46,9 @@ const Chatbot = () => {
 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      // Using simpler structure to avoid 400 Bad Request
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: userMsg,
+        contents: [{ role: 'user', parts: [{ text: userMsg }] }],
         config: { 
           systemInstruction: SYSTEM_INSTRUCTION,
           temperature: 0.7 
@@ -55,11 +56,13 @@ const Chatbot = () => {
       });
       
       const text = response.text;
-      setMessages(prev => [...prev, { role: 'model', text: text || "I am at your service. How else can I help?" }]);
+      setMessages(prev => [...prev, { role: 'model', text: text || "I am here to assist. Could you please clarify your request?" }]);
     } catch (e: any) {
-      console.error("Gemini Error:", e);
+      console.error("Gemini API Error:", e);
       setMessages(prev => [...prev, { role: 'model', text: "My apologies, I am currently attending to another guest. Please contact us at charliechef13@gmail.com for immediate assistance." }]);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -87,8 +90,8 @@ const Chatbot = () => {
             )}
           </div>
           <div className="p-5 bg-white border-t flex gap-3">
-            <input value={input} onChange={e => setInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSend()} className="flex-1 text-xs outline-none px-4 py-3 bg-bone rounded-full border border-gold/5 focus:border-gold/30 transition-colors" placeholder="Type your inquiry..." />
-            <button onClick={handleSend} className="text-gold font-bold text-xs uppercase tracking-widest px-2">Send</button>
+            <input value={input} onChange={e => setInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSend()} className="flex-1 text-xs outline-none px-4 py-3 bg-bone rounded-full border border-gold/5 focus:border-gold/30 transition-colors" placeholder="Inquire here..." />
+            <button onClick={handleSend} className="text-gold font-bold text-xs uppercase tracking-widest px-2 hover:text-olive transition-colors">Send</button>
           </div>
         </div>
       )}
@@ -106,18 +109,40 @@ const App = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFormStatus('submitting');
-    setTimeout(() => setFormStatus('success'), 1500);
+    
+    const formData = new FormData(e.currentTarget);
+    
+    try {
+      // Reemplaza con tu endpoint de Formspree si tienes uno específico (ej: https://formspree.io/f/xyzaabbcc)
+      // Si usas el email directamente, asegúrate de haber aceptado el primer email de confirmación de Formspree.
+      const response = await fetch('https://formspree.io/f/xkgnpjeg', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        setFormStatus('success');
+      } else {
+        throw new Error('Form submission failed');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('There was an error sending your message. Please try again or email us directly at charliechef13@gmail.com');
+      setFormStatus('idle');
+    }
   };
 
   return (
     <div className="min-h-screen selection:bg-gold selection:text-white bg-bone">
-      {/* Navigation */}
       <nav className={`fixed w-full z-40 transition-all duration-700 py-6 px-8 md:px-20 flex justify-between items-center ${isScrolled ? 'glass-nav py-4' : 'bg-transparent text-white'}`}>
         <div className="flex items-center gap-4">
-          <img src={IMAGES.LOGO} className="h-10 w-auto" alt="Artesano Monogram" />
+          <img src={IMAGES.LOGO} className={`h-10 w-auto transition-all ${isScrolled ? '' : 'brightness-0 invert'}`} alt="Artesano" />
           <h1 className={`font-serif text-2xl tracking-[0.4em] uppercase transition-colors ${isScrolled ? 'text-charcoal' : 'text-white'}`}>Artesano</h1>
         </div>
         <div className={`hidden md:flex gap-12 text-[10px] font-bold tracking-[0.3em] uppercase items-center ${isScrolled ? 'text-charcoal' : 'text-white'}`}>
@@ -127,10 +152,9 @@ const App = () => {
         </div>
       </nav>
 
-      {/* Hero Section */}
       <header className="h-screen relative flex items-center justify-center text-white text-center">
         <div className="absolute inset-0 bg-charcoal overflow-hidden">
-          <img src={IMAGES.HERO} className="w-full h-full object-cover opacity-50 scale-105 animate-[pulse_10s_infinite_alternate]" alt="Haute Cuisine" />
+          <img src={IMAGES.HERO} className="w-full h-full object-cover opacity-50 scale-105 animate-[pulse_10s_infinite_alternate]" alt="Hero" />
         </div>
         <div className="relative z-10 space-y-12 animate-fade-up px-4">
           <p className="uppercase tracking-[0.8em] text-gold text-[10px] font-bold">Haute Mediterranean Cuisine</p>
@@ -141,11 +165,10 @@ const App = () => {
         </div>
       </header>
 
-      {/* Philosophy Section */}
       <section id="philosophy" className="py-40 px-6 max-w-7xl mx-auto grid md:grid-cols-2 gap-20 items-center">
         <div className="relative group">
           <div className="absolute -inset-4 bg-gold/5 blur-2xl rounded-3xl transition-all group-hover:bg-gold/10"></div>
-          <img src={IMAGES.PHILOSOPHY} className="relative rounded-3xl shadow-2xl object-cover w-full h-[600px] grayscale-[0.3] hover:grayscale-0 transition-all duration-1000" alt="The Chef" />
+          <img src={IMAGES.PHILOSOPHY} className="relative rounded-3xl shadow-2xl object-cover w-full h-[600px] grayscale-[0.3] hover:grayscale-0 transition-all duration-1000" alt="Philosophy" />
         </div>
         <div className="space-y-8 px-4">
           <span className="text-gold uppercase tracking-[0.4em] text-[10px] font-bold">The Vision</span>
@@ -159,7 +182,6 @@ const App = () => {
         </div>
       </section>
 
-      {/* Menus Section */}
       <section id="menus" className="py-40 bg-[#F2F1EE] px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-24 space-y-4">
@@ -169,8 +191,8 @@ const App = () => {
           <div className="grid md:grid-cols-3 gap-12">
             {[
               { n: 'Essence', p: 'From £65', img: IMAGES.MENU_1, d: 'Focusing on seasonal market treasures.' },
-              { n: 'Heritage', p: 'From £85', img: IMAGES.MENU_2, d: 'A journey through classical Mediterranean roots.' },
-              { n: 'Signature', p: 'From £100', img: IMAGES.MENU_3, d: 'The Chef\'s ultimate 8-course curated selection.' }
+              { n: 'Heritage', p: 'From £85', img: IMAGES.MENU_2, d: 'A journey through Mediterranean roots.' },
+              { n: 'Signature', p: 'From £100', img: IMAGES.MENU_3, d: 'The ultimate curated 8-course selection.' }
             ].map((m, i) => (
               <div key={i} className="bg-bone rounded-[3rem] overflow-hidden shadow-lg group hover:shadow-2xl transition-all duration-700 flex flex-col h-full">
                 <div className="h-80 overflow-hidden relative">
@@ -191,10 +213,9 @@ const App = () => {
         </div>
       </section>
 
-      {/* Logistics Section */}
       <section className="py-40 px-6 max-w-7xl mx-auto grid md:grid-cols-2 gap-20 items-center">
         <div className="space-y-12 order-2 md:order-1">
-          <span className="text-gold uppercase tracking-[0.4em] text-[10px] font-bold">Private Logistics</span>
+          <span className="text-gold uppercase tracking-[0.4em] text-[10px] font-bold">Service Logistics</span>
           <h3 className="text-5xl font-serif text-charcoal leading-tight">Discretion <br/> & Excellence.</h3>
           <p className="text-charcoal/50 text-sm leading-relaxed tracking-wide font-light">
             We manage the entire process, from sourcing the finest ingredients to leaving your kitchen in pristine condition.
@@ -206,21 +227,20 @@ const App = () => {
           </ul>
         </div>
         <div className="order-1 md:order-2">
-           <img src={IMAGES.LOGISTICS} className="rounded-3xl shadow-2xl h-[550px] w-full object-cover" alt="Service Logistics" />
+           <img src={IMAGES.LOGISTICS} className="rounded-3xl shadow-2xl h-[550px] w-full object-cover" alt="Service" />
         </div>
       </section>
 
-      {/* Enquiry Form */}
       <section id="enquire" className="py-40 bg-charcoal text-white relative flex items-center min-h-[800px]">
         <div className="absolute inset-0 opacity-10">
-          <img src={IMAGES.FORM_BG} className="w-full h-full object-cover" alt="Background Texture" />
+          <img src={IMAGES.FORM_BG} className="w-full h-full object-cover" alt="Background" />
         </div>
         <div className="max-w-3xl mx-auto relative z-10 w-full px-6 text-center">
           {formStatus === 'success' ? (
             <div className="space-y-8 animate-fade-up">
               <h3 className="text-5xl font-serif italic">Inquiry Sent.</h3>
-              <p className="opacity-50 text-xs uppercase tracking-widest">Chef Charlie will personally contact you shortly.</p>
-              <button onClick={() => setFormStatus('idle')} className="text-gold text-[10px] uppercase tracking-widest border-b border-gold pb-1 mt-4">Send another enquiry</button>
+              <p className="opacity-50 text-xs uppercase tracking-widest">Chef Charlie will contact you shortly.</p>
+              <button onClick={() => setFormStatus('idle')} className="text-gold text-[10px] uppercase tracking-widest border-b border-gold pb-1 mt-4">New Inquiry</button>
             </div>
           ) : (
             <form className="space-y-16" onSubmit={handleFormSubmit}>
@@ -229,12 +249,12 @@ const App = () => {
                 <h3 className="text-6xl font-serif italic">Secure Your Date.</h3>
               </div>
               <div className="grid md:grid-cols-2 gap-12">
-                <input required className="bg-transparent border-b border-white/20 py-5 outline-none focus:border-gold w-full text-xs uppercase tracking-widest transition-all" placeholder="Full Name" />
-                <input required type="email" className="bg-transparent border-b border-white/20 py-5 outline-none focus:border-gold w-full text-xs uppercase tracking-widest transition-all" placeholder="Email Address" />
+                <input name="name" required className="bg-transparent border-b border-white/20 py-5 outline-none focus:border-gold w-full text-xs uppercase tracking-widest transition-all" placeholder="Name" />
+                <input name="email" required type="email" className="bg-transparent border-b border-white/20 py-5 outline-none focus:border-gold w-full text-xs uppercase tracking-widest transition-all" placeholder="Email" />
               </div>
-              <textarea required className="bg-transparent border-b border-white/20 py-5 outline-none focus:border-gold w-full h-32 text-xs uppercase tracking-widest resize-none transition-all" placeholder="Tell us about your event..."></textarea>
-              <button className="w-full bg-gold py-8 rounded-full font-bold uppercase tracking-[0.4em] text-[10px] hover:bg-white hover:text-charcoal transition-all duration-500 shadow-xl transform hover:-translate-y-1">
-                {formStatus === 'submitting' ? 'Submitting Inquiry...' : 'Send Inquiry'}
+              <textarea name="message" required className="bg-transparent border-b border-white/20 py-5 outline-none focus:border-gold w-full h-32 text-xs uppercase tracking-widest resize-none transition-all" placeholder="Details of your event..."></textarea>
+              <button type="submit" className="w-full bg-gold py-8 rounded-full font-bold uppercase tracking-[0.4em] text-[10px] hover:bg-white hover:text-charcoal transition-all duration-500 shadow-xl transform hover:-translate-y-1">
+                {formStatus === 'submitting' ? 'Submitting...' : 'Send Inquiry'}
               </button>
             </form>
           )}
@@ -243,7 +263,7 @@ const App = () => {
 
       <footer className="py-24 text-center bg-bone border-t border-gold/5">
         <div className="max-w-7xl mx-auto px-6 space-y-12">
-          <img src={IMAGES.LOGO} className="h-12 mx-auto grayscale opacity-40 mb-8" alt="Artesano" />
+          <img src={IMAGES.LOGO} className="h-12 mx-auto grayscale opacity-40 mb-8" alt="Logo" />
           <div className="flex justify-center gap-12 text-[10px] uppercase tracking-[0.3em] font-bold text-charcoal/40">
             <a href="#philosophy" className="hover:text-gold transition-colors">Philosophy</a>
             <a href="#menus" className="hover:text-gold transition-colors">Menus</a>
